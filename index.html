@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Website Content Planner</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .step {
+            display: none;
+        }
+
+        .step.active {
+            display: block;
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .progress {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            position: relative;
+        }
+
+        .progress::before {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #e0e0e0;
+            z-index: 0;
+        }
+
+        .progress-step {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            flex: 1;
+        }
+
+        .progress-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #e0e0e0;
+            margin: 0 auto 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #999;
+        }
+
+        .progress-step.active .progress-circle {
+            background: #667eea;
+            color: white;
+        }
+
+        .progress-step.completed .progress-circle {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        textarea, input[type="text"] {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            font-family: inherit;
+            transition: border 0.3s;
+        }
+
+        textarea:focus, input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: #d0d0d0;
+        }
+
+        .question-box {
+            background: #f8f9ff;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .question-box h3 {
+            color: #667eea;
+            margin-bottom: 8px;
+        }
+
+        .question-box p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .page-selector {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .page-card {
+            border: 2px solid #e0e0e0;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .page-card:hover {
+            border-color: #667eea;
+            background: #f8f9ff;
+            transform: translateY(-2px);
+        }
+
+        .page-card h4 {
+            margin-top: 10px;
+            color: #333;
+        }
+
+        .content-output {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 10px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            font-family: 'Georgia', serif;
+            line-height: 1.8;
+            margin-bottom: 20px;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .error.active {
+            display: block;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .button-group .btn {
+            flex: 1;
+        }
+
+        .info-badge {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .debug-info {
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 20px;
+            font-size: 12px;
+            color: #666;
+            display: none;
+        }
+
+        .debug-info.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 AI Content Planner</h1>
+            <p>Smart website content generation powered by AI</p>
+        </div>
+
+        <div class="card">
+            <!-- Progress Indicator -->
+            <div class="progress">
+                <div class="progress-step active" id="progress-1">
+                    <div class="progress-circle">1</div>
+                    <small>Describe</small>
+                </div>
+                <div class="progress-step" id="progress-2">
+                    <div class="progress-circle">2</div>
+                    <small>Questions</small>
+                </div>
+                <div class="progress-step" id="progress-3">
+                    <div class="progress-circle">3</div>
+                    <small>Generate</small>
+                </div>
+            </div>
+
+            <!-- Error Display (at top) -->
+            <div class="error" id="error"></div>
+
+            <!-- Step 1: Business Description -->
+            <div class="step active" id="step-1">
+                <h2>Describe Your Business</h2>
+                <p class="subtitle">Tell us about your product or service</p>
+                
+                <div class="form-group">
+                    <label for="description">Business Description</label>
+                    <textarea id="description" placeholder="Example: I want to make a website for a pizza shop that serves authentic Italian pizzas with fresh ingredients..."></textarea>
+                </div>
+
+                <button class="btn" id="analyze-btn" onclick="analyzeBusiness()">Start Smart Questions →</button>
+                
+                <div class="debug-info" id="debug-1"></div>
+            </div>
+
+            <!-- Step 2: Questions -->
+            <div class="step" id="step-2">
+                <div class="info-badge" id="question-counter">Question 1 of 6</div>
+                
+                <div id="current-question"></div>
+                
+                <div class="form-group">
+                    <label for="answer">Your Answer</label>
+                    <textarea id="answer" placeholder="Type your answer here..."></textarea>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn btn-secondary" id="prev-btn" onclick="previousQuestion()">← Previous</button>
+                    <button class="btn" id="next-btn" onclick="nextQuestion()">Next →</button>
+                </div>
+                
+                <div class="debug-info" id="debug-2"></div>
+            </div>
+
+            <!-- Step 3: Generate Content -->
+            <div class="step" id="step-3">
+                <h2>Generate Page Content</h2>
+                <p class="subtitle">Choose which page to create</p>
+
+                <div class="page-selector" id="page-selector">
+                    <div class="page-card" onclick="generateContent('Home')">
+                        <div style="font-size: 40px;">🏠</div>
+                        <h4>Home Page</h4>
+                    </div>
+                    <div class="page-card" onclick="generateContent('About')">
+                        <div style="font-size: 40px;">ℹ️</div>
+                        <h4>About Page</h4>
+                    </div>
+                    <div class="page-card" onclick="generateContent('Services')">
+                        <div style="font-size: 40px;">⚙️</div>
+                        <h4>Services Page</h4>
+                    </div>
+                    <div class="page-card" onclick="generateContent('Contact')">
+                        <div style="font-size: 40px;">📧</div>
+                        <h4>Contact Page</h4>
+                    </div>
+                </div>
+
+                <div id="content-display" style="display: none;">
+                    <h3 id="content-title"></h3>
+                    <div class="content-output" id="content-text"></div>
+                    <div class="button-group">
+                        <button class="btn" onclick="copyContent()">📋 Copy Content</button>
+                        <button class="btn btn-secondary" onclick="backToSelector()">Generate Another</button>
+                    </div>
+                </div>
+                
+                <div class="debug-info" id="debug-3"></div>
+            </div>
+
+            <!-- Loading State -->
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p id="loading-text">Processing...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Enable debug mode - set to false in production
+        const DEBUG = true;
+
+        let currentStep = 1;
+        let questions = [];
+        let currentQuestionIndex = 0;
+        let answers = {};
+
+        function debugLog(step, message, data = null) {
+            if (DEBUG) {
+                console.log(`[Step ${step}] ${message}`, data || '');
+                const debugEl = document.getElementById(`debug-${step}`);
+                if (debugEl) {
+                    debugEl.classList.add('active');
+                    debugEl.innerHTML += `<div>${new Date().toLocaleTimeString()}: ${message}</div>`;
+                    if (data) {
+                        debugEl.innerHTML += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                    }
+                }
+            }
+        }
+
+        function showStep(step) {
+            debugLog(step, `Showing step ${step}`);
+            
+            // Hide all steps
+            document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));
+            
+            // Show target step
+            const targetStep = document.getElementById(`step-${step}`);
+            if (targetStep) {
+                targetStep.classList.add('active');
+            }
+            
+            // Hide loading
+            document.getElementById('loading').classList.remove('active');
+            
+            // Update progress
+            for (let i = 1; i <= 3; i++) {
+                const progressEl = document.getElementById(`progress-${i}`);
+                if (i < step) {
+                    progressEl.classList.add('completed');
+                    progressEl.classList.remove('active');
+                } else if (i === step) {
+                    progressEl.classList.add('active');
+                    progressEl.classList.remove('completed');
+                } else {
+                    progressEl.classList.remove('active', 'completed');
+                }
+            }
+            
+            currentStep = step;
+        }
+
+        function showLoading(text = 'Processing...') {
+            debugLog(currentStep, 'Showing loading', {text});
+            document.getElementById('loading').classList.add('active');
+            document.getElementById('loading-text').textContent = text;
+            document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));
+        }
+
+        function hideLoading() {
+            debugLog(currentStep, 'Hiding loading');
+            document.getElementById('loading').classList.remove('active');
+        }
+
+        function showError(message) {
+            debugLog(currentStep, 'Error occurred', {message});
+            const errorEl = document.getElementById('error');
+            errorEl.textContent = message;
+            errorEl.classList.add('active');
+            setTimeout(() => errorEl.classList.remove('active'), 5000);
+        }
+
+        async function analyzeBusiness() {
+            const description = document.getElementById('description').value.trim();
+            debugLog(1, 'Analyzing business', {description});
+            
+            if (!description) {
+                showError('Please enter a business description');
+                return;
+            }
+
+            const btn = document.getElementById('analyze-btn');
+            btn.disabled = true;
+            btn.textContent = 'Analyzing...';
+            
+            showLoading('Analyzing your business...');
+
+            try {
+                debugLog(1, 'Sending request to /api/analyze');
+                
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({description})
+                });
+
+                debugLog(1, 'Response received', {
+                    status: response.status,
+                    ok: response.ok
+                });
+
+                const data = await response.json();
+                debugLog(1, 'Response data', data);
+                
+                if (response.ok) {
+                    questions = data.questions;
+                    currentQuestionIndex = 0;
+                    
+                    debugLog(1, 'Questions received', {
+                        count: questions.length,
+                        questions: questions
+                    });
+                    
+                    hideLoading();
+                    displayQuestion();
+                    showStep(2);
+                } else {
+                    hideLoading();
+                    showError(data.error || 'Failed to analyze business');
+                    showStep(1);
+                }
+            } catch (error) {
+                debugLog(1, 'Network error', {error: error.message});
+                hideLoading();
+                showError('Network error: ' + error.message);
+                showStep(1);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Start Smart Questions →';
+            }
+        }
+
+        function displayQuestion() {
+            if (!questions || questions.length === 0) {
+                debugLog(2, 'No questions to display');
+                showError('No questions available');
+                return;
+            }
+            
+            const question = questions[currentQuestionIndex];
+            debugLog(2, 'Displaying question', {
+                index: currentQuestionIndex,
+                question: question
+            });
+            
+            document.getElementById('question-counter').textContent = 
+                `Question ${currentQuestionIndex + 1} of ${questions.length}`;
+            
+            document.getElementById('current-question').innerHTML = `
+                <div class="question-box">
+                    <h3>${question.question}</h3>
+                    <p>${question.purpose}</p>
+                </div>
+            `;
+
+            document.getElementById('answer').value = answers[question.id] || '';
+            
+            // Update button states
+            document.getElementById('prev-btn').disabled = currentQuestionIndex === 0;
+            document.getElementById('next-btn').textContent = 
+                currentQuestionIndex === questions.length - 1 ? 'Complete →' : 'Next →';
+        }
+
+        function nextQuestion() {
+            const question = questions[currentQuestionIndex];
+            const answer = document.getElementById('answer').value.trim();
+            
+            debugLog(2, 'Next question clicked', {
+                currentIndex: currentQuestionIndex,
+                answer: answer
+            });
+            
+            if (!answer) {
+                showError('Please provide an answer');
+                return;
+            }
+
+            answers[question.id] = answer;
+
+            if (currentQuestionIndex < questions.length - 1) {
+                currentQuestionIndex++;
+                displayQuestion();
+            } else {
+                debugLog(2, 'All questions answered, submitting', {answers});
+                submitAnswers();
+            }
+        }
+
+        function previousQuestion() {
+            if (currentQuestionIndex > 0) {
+                // Save current answer
+                const question = questions[currentQuestionIndex];
+                const answer = document.getElementById('answer').value.trim();
+                if (answer) {
+                    answers[question.id] = answer;
+                }
+                
+                currentQuestionIndex--;
+                displayQuestion();
+            }
+        }
+
+        async function submitAnswers() {
+            showLoading('Saving your answers...');
+
+            try {
+                debugLog(2, 'Submitting answers', {answers});
+                
+                const response = await fetch('/api/submit-answers', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({answers})
+                });
+
+                debugLog(2, 'Submit response', {
+                    status: response.status,
+                    ok: response.ok
+                });
+
+                if (response.ok) {
+                    hideLoading();
+                    showStep(3);
+                } else {
+                    const data = await response.json();
+                    hideLoading();
+                    showError(data.error || 'Failed to save answers');
+                    showStep(2);
+                }
+            } catch (error) {
+                debugLog(2, 'Submit error', {error: error.message});
+                hideLoading();
+                showError('Network error: ' + error.message);
+                showStep(2);
+            }
+        }
+
+        async function generateContent(pageType) {
+            showLoading(`Generating ${pageType} page content...`);
+
+            try {
+                debugLog(3, 'Generating content', {pageType});
+                
+                const response = await fetch(`/api/generate/${pageType}`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'}
+                });
+
+                debugLog(3, 'Generate response', {
+                    status: response.status,
+                    ok: response.ok
+                });
+
+                const data = await response.json();
+                debugLog(3, 'Content received', {
+                    pageType: data.page_type,
+                    contentLength: data.content?.length || 0
+                });
+                
+                if (response.ok) {
+                    document.getElementById('content-title').textContent = 
+                        `${data.page_type} Page Content`;
+                    document.getElementById('content-text').textContent = data.content;
+                    document.getElementById('content-display').style.display = 'block';
+                    document.getElementById('page-selector').style.display = 'none';
+                    hideLoading();
+                    showStep(3);
+                } else {
+                    hideLoading();
+                    showError(data.error || 'Failed to generate content');
+                    showStep(3);
+                }
+            } catch (error) {
+                debugLog(3, 'Generate error', {error: error.message});
+                hideLoading();
+                showError('Network error: ' + error.message);
+                showStep(3);
+            }
+        }
+
+        function copyContent() {
+            const content = document.getElementById('content-text').textContent;
+            navigator.clipboard.writeText(content).then(() => {
+                alert('Content copied to clipboard!');
+            }).catch(err => {
+                showError('Failed to copy content');
+            });
+        }
+
+        function backToSelector() {
+            document.getElementById('content-display').style.display = 'none';
+            document.getElementById('page-selector').style.display = 'grid';
+        }
+
+        // Log page load
+        debugLog(1, 'Page loaded successfully');
+    </script>
+</body>
+</html>
